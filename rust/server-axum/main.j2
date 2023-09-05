@@ -34,10 +34,9 @@ async fn main() {
         .route("/", get(root))
         .with_state(pool);
 
-    // run it with hyper
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let port = std::env::var("HTTP_PORT").unwrap_or("3000".to_string()).parse::<u16>().unwrap();
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
     tracing::debug!("listening on {}", addr);
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
