@@ -4,8 +4,9 @@
 {{ m::do_not_modify() }}
 use serde::{Serialize, Deserialize, Deserializer};
 use std::collections::BTreeMap;
-{% if not options.skipValidate %}use validator::Validate;
-use regex::Regex;{% endif %}
+{% if not options.skipValidate %}
+use validator::Validate;
+{% endif %}
 {% block use %}{% endblock use %}
 
 {% if formats is containing("decimal") %}
@@ -13,16 +14,6 @@ use rust_decimal::Decimal;
 {% endif %}
 {% if formats is containing("date-time") %}
 use chrono::{DateTime, Utc};
-{% endif %}
-
-{% if not options.skipValidate %}
-lazy_static::lazy_static! {
-   static ref UUID: Regex = Regex::new(r"^\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b$").unwrap();
-   static ref FLOAT: Regex = Regex::new(r"^[0-9\.]+$").unwrap();
-{% for regexp in regexps -%}
-   static ref {{ regexp.name | snakecase | upper }}: Regex = Regex::new(r"{{ regexp.pattern }}").unwrap();
-{% endfor %}
-}
 {% endif %}
 
 {% for model in models %}

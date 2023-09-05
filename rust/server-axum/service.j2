@@ -1,11 +1,11 @@
-{# type=tags,filename=api/service.rs,min_version=0.5.0 #}
+{# type=tags,filename=src/api/service.rs,min_version=0.5.0 #}
 {%- import "macros.j2" as m -%}
 {%- import "extra.j2" as e -%}
 {{ m::do_not_modify() }}
 
 use axum::{
     body::{Body, BoxBody, HttpBody},
-    extract::{FromRequest, RequestParts},
+    extract::{FromRequest},
     handler::{future::IntoServiceFuture, Handler},
     http::Request,
     response::{IntoResponse, Response},
@@ -19,8 +19,6 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use tower_service::Service;
-
 
 macro_rules! all_the_tuples {
     ($name:ident) => {
