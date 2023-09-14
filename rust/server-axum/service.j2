@@ -20,36 +20,34 @@ use std::{
     task::{Context, Poll},
 };
 
-macro_rules! all_the_tuples {
-    ($name:ident) => {
-        $name!(T1);
-        $name!(T1, T2);
-        $name!(T1, T2, T3);
-        $name!(T1, T2, T3, T4);
-        $name!(T1, T2, T3, T4, T5);
-	}
-}
-
 {% for tag in tags %}
-/// {{ tag.tag }} router
-pub struct {{ tag.tag | pascalcase }}Router {
-	pub(crate) router: Router,
+{% for endpoint in tag.endpoints %}
+
+async fn {{ endpoint.operation | pascalcase }}(State(pool): State<Pool>,Json(new_user): Json<NewUser>,) -> Result<Json<User>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let res = diesel::insert_into(users::table)
+        .values(new_user)
+        .returning(User::as_returning())
+        .get_result(&mut conn)
+        .await
+        .map_err(internal_error)?;
+    Ok(Json(res))
 }
 
-impl {{ tag.tag | pascalcase }}Router {
+    impl {{ tag.tag | pascalcase }}Router {
 	pub fn new() -> Self {
 		Self {
 			router: Router::new()
 		}
 	}
 
-	{% for endpoint in tag.endpoints %}
 	pub fn {{ endpoint.operation | snakecase }}<H, T>(mut self, handler: H) -> Self
         where
             H: {{ endpoint.operation | pascalcase }}Handler<T>,
             T: 'static
 	{
-        self.router = self.router.route("{{ endpoint.path | replace(from="{", to=":") | replace(from="}", to="") }}", on_service(MethodFilter::{{ endpoint.method | upper }}, {{ endpoint.operation | pascalcase }}Service::new(handler)));
+        self.router = self.router.route("{{ endpoint.path | replace(from="{", to=":") | replace(from="}", to="") }}", on_service(MethodFilter::{{ endpoint.method | upper }}, {{ endpoint.operation | snakecase }}Service::new(handler)));
 
 		self
 	}

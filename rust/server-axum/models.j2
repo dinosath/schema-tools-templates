@@ -4,6 +4,9 @@
 {{ m::do_not_modify() }}
 use serde::{Serialize, Deserialize, Deserializer};
 use std::collections::BTreeMap;
+use diesel::{Insertable, Queryable, Selectable, Identifiable};
+use crate::schemas::schema::*;
+use crate::schema::*;
 {% if not options.skipValidate %}
 use validator::Validate;
 {% endif %}
@@ -18,7 +21,8 @@ use chrono::{DateTime, Utc};
 
 {% for model in models %}
 {%- if model.object %}
-#[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %})]
+
+#[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Queryable, Identifiable, Selectable)]
 pub struct {{ m::model_name(name = model.object.name) }} {
     {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
     {% for property in filtered_properties -%}

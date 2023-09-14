@@ -1,0 +1,24 @@
+{# type=static,filename=build.rs,min_version=0.5.0 #}
+
+use testcontainers::*;
+use testcontainers::images::generic::GenericImage;
+use testcontainers::core::WaitFor;
+use testcontainers::images::postgres::Postgres;
+use std::{thread, time};
+use std::process::Command;
+
+
+fn main() {
+    let docker = clients::Cli::default();
+    let postgres = Postgres::default();
+
+    let node = docker.run(postgres);
+
+    let time = time::Duration::from_secs(2);
+
+    Command::new("diesel")
+            .arg("setup")
+        .spawn()
+        .expect("ls command failed to start");
+
+}

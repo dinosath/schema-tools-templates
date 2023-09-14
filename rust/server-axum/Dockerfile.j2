@@ -1,0 +1,10 @@
+{# type=static,filename=Dockerfile,min_version=0.5.0 #}
+
+FROM clux/muslrust:stable as builder
+WORKDIR /volume
+COPY . .
+RUN RUST_BACKTRACE=full cargo build --release
+
+FROM alpine
+COPY --from=builder /volume/target/x86_64-unknown-linux-musl/release/schema-tools-tests .
+ENTRYPOINT [ "/schema-tools-tests" ]
