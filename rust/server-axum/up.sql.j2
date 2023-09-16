@@ -1,0 +1,20 @@
+{# type=models,filename=migrations/00000000000001_initial_setup/up.sql,min_version=0.5.0 #}
+{% import "macros.j2" as m -%}
+
+{% for model in models %}
+{%- if model.object %}
+CREATE TABLE {{ m::model_name(name = model.object.name) | snakecase | pluralize }} (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR NOT NULL,
+  body TEXT NOT NULL,
+  published BOOLEAN NOT NULL DEFAULT FALSE
+  {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
+  {% for property in filtered_properties -%}
+  {{ property.name }} {% if property.primary-key %}PRIMARY KEY{% elif not property.required %}, skip_serializing_if = "Option::is_none"{% endif %} {% if property.required and not property.nullable %}NOT NULL{% elif not property.required %}, skip_serializing_if = "Option::is_none"{% endif %})
+  pub {{ m::property_name(name = property.name) }}: {% if not property.required %}Option<{% endif %}{{ m::type(property = property) }}{% if not property.required %}>{% endif %},
+  {%- endfor %}
+
+)
+
+{% endif %}
+{% endfor %}
