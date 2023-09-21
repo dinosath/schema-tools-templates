@@ -3,18 +3,51 @@
 
 {% for model in models %}
 {%- if model.object %}
-CREATE TABLE {{ m::model_name(name = model.object.name) | snakecase | pluralize }} (
-  id SERIAL PRIMARY KEY,
-  title VARCHAR NOT NULL,
-  body TEXT NOT NULL,
-  published BOOLEAN NOT NULL DEFAULT FALSE
+CREATE TABLE {{ m::model_name(name = model.object.name) | snakecase }} (
+  
   {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
-  {% for property in filtered_properties -%}
-  {{ property.name }} {% if property.primary-key %}PRIMARY KEY{% elif not property.required %}, skip_serializing_if = "Option::is_none"{% endif %} {% if property.required and not property.nullable %}NOT NULL{% elif not property.required %}, skip_serializing_if = "Option::is_none"{% endif %})
-  pub {{ m::property_name(name = property.name) }}: {% if not property.required %}Option<{% endif %}{{ m::type(property = property) }}{% if not property.required %}>{% endif %},
+  {% for property in model.object.properties -%}
+  {{ property.name }}
+  
   {%- endfor %}
+
 
 )
 
 {% endif %}
 {% endfor %}
+
+
+{% macro get_sql_type(property) %}
+{% filter nospaces %}
+{% if property.type == "string" %}
+    {% if property.validation and property.validation.format and property.validation.format == "uuid" %}
+    UUID
+    {% elif property.validation and property.validation.format and property.validation.format == "date-time" %}
+    TIMESTAMPTZ
+    {% else %}
+    VARCHAR
+    {% endif %}
+{% elif property.type == "boolean" %}
+    BOOLEAN
+{% elif property.type == "integer" and property.validation.minimum | default(value = -1) >= 0 %}
+    u64
+{% elif property.type == "integer" %}
+    i64
+{% elif property.type == "number" %}
+    f64
+{% elif property.type == "any" %}
+    serde_json::Value
+{% elif property.type == "array" and property.model %}
+    Vec<>
+{% elif property.type == "map" and property.model %}
+    BTreeMap<String>
+{% elif property.type == "object" and property.model %}
+    
+{% elif property.type == "wrapper" and property.model %}
+    
+{% elif property.type == "enum" and property.model %}
+    
+{% endif %}
+{% endfilter %}
+{% endmacro get_sql_type %}
