@@ -1,0 +1,48 @@
+{# type=model,filename=src/main/java/%options.package%/models/%model.name%.java,min_version=0.2.0 #}
+{% import "macros.j2" as m -%}
+
+package {{options.package}}.models;
+{{m::model_imports(model=model,package=options.package)}}
+{% if model.object and m::has_id(model=model) -%}
+@Entity
+{% endif -%}
+public {%- if model.enum %} enum {%- else %} class {% endif %} {{ model.name }}{
+
+    {%- if model.enum %}
+    {%- for option in model.enum.options %}
+    {{ option }},
+    {% endfor -%}
+    {% endif -%}
+
+
+    {%- if model.object %}
+    {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
+    {% else -%}
+    {%- set filtered_properties = [] -%}
+    {% endif -%}
+
+    {%- for property in filtered_properties -%}
+    {%- set property_name = m::property_name(property = property) -%}
+
+
+    {% if property.validation and property.type != 'enum' %}
+    {% if m::get_validation(validation = property.validation) | length %}
+    {% if not options.skipValidate %}({{ m::get_validation(validation = property.validation) }}){% endif %}
+    {% endif %}
+    {% elif m::need_nested_validation(property=property)%}
+    {% if not options.skipValidate %}{% endif %}
+    {% endif %}
+    private {{ m::type(property = property) }} {{ property_name }};
+    {% endfor -%}
+    {%- for property in filtered_properties %}
+    {%- set property_name = m::property_name(property = property) %}
+    
+    public {{ m::type(property = property) }} get{{ property_name| title }}(){
+        return this.{{ property_name }};
+    };
+
+    public {{ m::type(property = property) }} set{{ property_name| title }}({{ m::type(property = property) }} {{ property_name }}){
+        return this.{{ property_name }} = {{ property_name }} ;
+    };
+    {%- endfor %}
+}

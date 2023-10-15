@@ -1,0 +1,27 @@
+{# type=endpoints,filename=src/main/java/%options.package%/resources/Resources.java,min_version=0.2.0 #}
+{% import "macros.j2" as m -%}
+
+package {{options.package}}.resources;
+import {{options.package}}.models.*;
+import java.util.List;
+import java.util.Map;
+
+import jakarta.ws.rs.*;
+
+public class Resources{
+
+    @Inject
+    EntityManager em;
+
+    
+    
+    {% for endpoint in endpoints %}
+    @Transactional
+    {{ m::endpoint_consumes(endpoint=endpoint) }}
+    @Path("{{ endpoint.path }}")
+    @{{ endpoint.method | upper}}
+    public {{ m::response_type(endpoint=endpoint) }} {{endpoint.operation}}(){
+    
+    }
+    {% endfor -%}
+}
