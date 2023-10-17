@@ -57,11 +57,22 @@ import java.time.LocalDate;
 {% if model.object -%}
 {% for property in model.object.properties -%}
 {% if property.name == "id" -%}
-{% set has_id = true %}
+true
 {% endif %}
 {% endfor -%}
 {% endif %}
 {% endfilter %}{% endmacro has_id %}
+
+{% macro id_type(model) %}{% filter nospaces %}
+{% if model.object -%}
+{% for property in model.object.properties -%}
+{% if property.name == "id" -%}
+{{ self::type(model=property) | title }}
+{% endif %}
+{% endfor -%}
+{% endif %}
+{% endfilter %}{% endmacro has_id %}
+
 
 {% macro response_type(endpoint) %}{% filter nospaces %}
 {% if endpoint.responses.success %}
@@ -77,35 +88,46 @@ void
 {% endif %}
 {% endfilter %}{% endmacro response_type %}
 
-{% macro request_type(endpoint) %}{% filter nospaces %}
-{% if endpoint.responses.success %}
-{% if endpoint.responses.success.models.default.model.type=='object'  %}
-{{ endpoint.responses.success.models.default.model.model.name }}
-{% elif endpoint.responses.success.models.default.model.type=='array' %}
-List<{{ endpoint.responses.success.models.default.model.model.model.name }}>
-{% else %}
-{{ endpoint.responses.success.models.default.model.type | camelcase | title }}
-{% endif %}
-{% else %}
-void
-{% endif %}
-{% endfilter %}{% endmacro request_type %}
+{%- macro request_body_type(endpoint) -%}{% filter nospaces %}
+{%- if endpoint.requestbody -%}
+{{ self::type(model=endpoint.requestbody.models.default.model) }}
+{%- endif -%}
+{% endfilter %}{%- endmacro request_body_type -%}
+
+{%- macro request_body_parameter(endpoint) -%}{% filter trim %}
+{%- set body = self::request_body_type(endpoint=endpoint) -%}
+{% if not body=="" %}@Valid{% endif %} {{ body }} {{ body | camelcase }}
+{% endfilter %}{%- endmacro request_body_parameter -%}
+
+
+{%- macro parameters(endpoint) -%}
+{%- for parameter in endpoint.parameters.all -%}
+@{{ parameter.kind | title }}Param("{{ parameter.name }}") {{ self::type(model=parameter.model) }} {{ parameter.name }}{% if not loop.last %}, {% endif %}
+{%- endfor %}
+{%- endmacro parameters -%}
+
+
+{%- macro request_arguments(endpoint) -%}
+{%- set parameters = self::parameters(endpoint=endpoint) -%}
+{%- set request_body = self::request_body_parameter(endpoint=endpoint) -%}
+{{ parameters }} {%- if not parameters=="" and not request_body=="" -%}, {%- endif -%} {{ request_body }}
+{%- endmacro request_arguments -%}
+
 
 {% macro endpoint_consumes(endpoint) %}{% filter nospaces %}
-
-{% if endpoint.requestBody %}
-{{ endpoint.requestBody | json_encode() }}
-@Produces({
-    
+{% if endpoint.requestbody %}
+@Consumes({
+{% for model in endpoint.requestbody.models.all -%}
+{% set media_type=self::media_type(content_type=model.contentType) -%}
+MediaType.{{ media_type }}{% if not loop.last %}, {% endif %}
+{%- endfor %}
 })
-{% if endpoint.requestBody.content['application/json']  %}
-MediaType.APPLICATION_JSON,
-{% endif %}
-{% if endpoint.requestBody.content['application/xml']  %}
-MediaType.APPLICATION_JSON,
-{% endif %}
 {% endif %}
 {% endfilter %}{% endmacro endpoint_consumes %}
+
+{% macro media_type(content_type) %}{% filter nospaces %}
+{{content_type | upper | replace(from="/", to="_") | replace(from="-", to="_")}}
+{% endfilter %}{% endmacro media_type %}
 
 {% macro is_primitive(type) %}{% filter nospaces %}{% endfilter %}{% endmacro is_primitive %}
 
@@ -158,48 +180,51 @@ MediaType.APPLICATION_JSON,
     {% endif %}
 {% endfilter %}{% endmacro get_validation %}
 
-{% macro type(property, ns="") -%}
+{% macro type(model) -%}
 {% filter nospaces %}
-{% if property.x.type %}
-    {{ property.x.type }}
-{% elif property.type =="number" and not property.format %}
-    {% if property.nullable %}Float{%- else %}float{% endif %}
-{% elif property.type =="number" and property.format == "float" %}
-    Float
-{% elif property.type =="number" and property.format == "double" %}
-    Double
-{% elif property.type =="integer" and not property.format %}
-    Integer
-{% elif property.type =="integer" and property.format == "int32" %}
-    Integer
-{% elif property.type =="integer" and property.format == "int64" %}
-    Long
-{% elif property.type == "string" %}
-    {% if property.validation and property.validation.format and property.validation.format == "uuid" %}
+{% if model.x.type %}
+    {{ model.x.type }}
+{% elif model.type %}
+{% if model.type =="number" and not model.validation %}
+    {% if model.nullable %}Float{%- else %}float{% endif %}
+{% elif model.type =="number" and model.validation.format == "float" %}
+    {% if model.nullable %}Float{%- else %}float{% endif %}
+{% elif model.type =="number" and model.validation.format == "double" %}
+    {% if model.nullable %}Double{%- else %}double{% endif %}
+{% elif model.type =="integer" and not model.validation %}
+    {% if model.nullable %}Integer{%- else %}int{% endif %}
+{% elif model.type =="integer" and model.validation.format == "int32" %}
+    {% if model.nullable %}Integer{%- else %}int{% endif %}
+{% elif model.type =="integer" and model.validation.format == "int64" %}
+    {% if model.nullable %}Long{%- else %}long{% endif %}
+{% elif model.type == "string" %}
+    {% if model.validation and model.validation.format and model.validation.format == "uuid" %}
     Uuid
-    {% elif property.validation and property.validation.format and property.validation.format == "date-time" %}
+    {% elif model.validation and model.validation.format and model.validation.format == "date-time" %}
     LocalDateTime
-    {% elif property.validation and property.validation.format and property.validation.format == "date" %}
+    {% elif model.validation and model.validation.format and model.validation.format == "date" %}
     LocalDate
     {% else %}
     String
     {% endif %}
-{% elif property.type == "boolean" %}
+{% elif model.type == "boolean" %}
     Boolean
-{% elif property.type == "any" %}
+{% elif model.type == "any" %}
     Object
-{% elif property.type == "array" and property.model %}
-    List<{{ self::type(property = property.model, ns = ns) }}>
-{% elif property.type == "map" and property.model %}
-    BTreeMap<String, {{ self::type(property = property.model, ns = ns) }}>
-{% elif property.type == "object" and property.model %}
-    {% if ns %}{{ ns }}::{% endif %}{{ self::model_name(name = property.model.type) }}
-{% elif property.type == "wrapper" and property.model %}
-    {% if ns %}{{ ns }}::{% endif %}{{ self::model_name(name = property.model.name) }}
-{% elif property.type == "enum" and property.model %}
-    {% if ns %}{{ ns }}::{% endif %}{{ self::model_name(name = property.model.name) }}
+{% elif model.type == "array" and model.model %}
+    List<{{ self::type(model = model.model) }}>
+{% elif model.type == "map" and model.model %}
+    BTreeMap<String, {{ self::type(mode = model.model) }}>
+{% elif model.type == "object" and model.model %}
+    {{ self::model_name(name = model.model.type) }}
+{% elif model.type == "wrapper" and model.model %}
+    {{ self::model_name(name = model.model.name) }}
+{% elif model.type == "enum" and model.model %}
+    {{ self::model_name(name = model.model.name) }}
 {% endif %}
-
+{% elif model.object %}
+    {{ model.object.name }}
+{% endif %}
 {% endfilter -%}
 {% endmacro type -%}
 

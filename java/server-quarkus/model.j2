@@ -3,6 +3,8 @@
 
 package {{options.package}}.models;
 {{m::model_imports(model=model,package=options.package)}}
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
 {% if model.object and m::has_id(model=model) -%}
 @Entity
 {% endif -%}
@@ -32,16 +34,20 @@ public {%- if model.enum %} enum {%- else %} class {% endif %} {{ model.name }}{
     {% elif m::need_nested_validation(property=property)%}
     {% if not options.skipValidate %}{% endif %}
     {% endif %}
-    private {{ m::type(property = property) }} {{ property_name }};
+    {% if  property_name=="id"-%}
+    @Id
+    @GeneratedValue
+    {% endif -%}
+    private {{ m::type(model = property) }} {{ property_name }};
     {% endfor -%}
     {%- for property in filtered_properties %}
     {%- set property_name = m::property_name(property = property) %}
     
-    public {{ m::type(property = property) }} get{{ property_name| title }}(){
+    public {{ m::type(model = property) }} get{{ property_name| title }}(){
         return this.{{ property_name }};
     };
 
-    public {{ m::type(property = property) }} set{{ property_name| title }}({{ m::type(property = property) }} {{ property_name }}){
+    public {{ m::type(model = property) }} set{{ property_name| title }}({{ m::type(model = property) }} {{ property_name }}){
         return this.{{ property_name }} = {{ property_name }} ;
     };
     {%- endfor %}

@@ -5,23 +5,33 @@ package {{options.package}}.resources;
 import {{options.package}}.models.*;
 import java.util.List;
 import java.util.Map;
+import jakarta.persistence.*;
+import jakarta.transaction.*;
+import jakarta.validation.Valid;
+import jakarta.inject.*;
 
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
 
 public class Resources{
 
     @Inject
     EntityManager em;
-
-    
     
     {% for endpoint in endpoints %}
     @Transactional
     {{ m::endpoint_consumes(endpoint=endpoint) }}
     @Path("{{ endpoint.path }}")
     @{{ endpoint.method | upper}}
-    public {{ m::response_type(endpoint=endpoint) }} {{endpoint.operation}}(){
-    
+    {% set response_type = m::response_type(endpoint=endpoint) -%}
+    public {{ response_type }} {{endpoint.operation}}({{ m::request_arguments(endpoint=endpoint) }}){
+        {{ endpoint | json_encode() }}
+        {% if endpoint.method | upper == "POST" -%}
+        return 
+        {% endif %}
+        {% if response_type == "void" -%}
+        return;
+        {% endif %}
     }
     {% endfor -%}
 }

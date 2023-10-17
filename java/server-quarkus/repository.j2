@@ -1,0 +1,10 @@
+{# type=model,filename=src/main/java/%options.package%/repositories/%model.name%Repository.java,min_version=0.2.0 #}
+{% import "macros.j2" as m -%}
+
+package {{options.package}}.repositories;
+import {{options.package}}.models.{{model.name}};
+import org.springframework.data.repository.CrudRepository;
+
+
+public interface {{ model.name }}Repository {% if model.object and m::has_id(model=model) %}extends CrudRepository<{{ m::type(model=model) }}, {{ m::id_type(model=model) }}> {% endif %}{
+}
