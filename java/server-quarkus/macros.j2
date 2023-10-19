@@ -63,6 +63,20 @@ true
 {% endif %}
 {% endfilter %}{% endmacro has_id %}
 
+{% macro get_id_property(model) %}{% filter nospaces %}
+{% if model.object -%}
+{% for property in model.object.properties -%}
+{% if property.name == "id" -%}
+{{ property }}
+{% endif %}
+{% endfor -%}
+{% endif %}
+{% endfilter %}{% endmacro get_id_property %}
+
+{% macro get_id_property_type(model) %}{% filter nospaces %}
+{{self::get_id_property(model=model)|json_encode()}}
+{% endfilter %}{% endmacro get_id_property_type %}
+
 {% macro id_type(model) %}{% filter nospaces %}
 {% if model.object -%}
 {% for property in model.object.properties -%}
@@ -90,15 +104,35 @@ void
 
 {%- macro request_body_type(endpoint) -%}{% filter nospaces %}
 {%- if endpoint.requestbody -%}
-{{ self::type(model=endpoint.requestbody.models.default.model) }}
+{%- if endpoint.requestbody.models.default.model.type=="object" -%}
+{{ endpoint.requestbody.models.default.model.model.type }}
+{%- elif endpoint.requestbody and endpoint.requestbody.models.default.model.type=="array" -%}
+{{ endpoint.requestbody.models.default.model.model.model.type }}
 {%- endif -%}
-{% endfilter %}{%- endmacro request_body_type -%}
+{%- endif -%}
+{% endfilter %}{%- endmacro request_body_type_string -%}
+
 
 {%- macro request_body_parameter(endpoint) -%}{% filter trim %}
 {%- set body = self::request_body_type(endpoint=endpoint) -%}
 {% if not body=="" %}@Valid{% endif %} {{ body }} {{ body | camelcase }}
 {% endfilter %}{%- endmacro request_body_parameter -%}
 
+{%- macro request_body_type_string(endpoint) -%}{% filter nospaces %}
+{%- if endpoint.requestbody -%}
+{%- if endpoint.requestbody.models.default.model.type=="object" -%}
+{{ endpoint.requestbody.models.default.model.model.type }}
+{%- elif endpoint.requestbody and endpoint.requestbody.models.default.model.type=="array" -%}
+{{ endpoint.requestbody.models.default.model.model.model.type }}
+{%- endif -%}
+{%- endif -%}
+{% endfilter %}{%- endmacro request_body_type_string -%}
+
+{%- macro contain_pathparam_with_id(endpoint) -%}{% filter trim %}
+{%- for parameter in endpoint.parameters.all -%}
+{{parameter|json_encode()}}
+{%- endfor %}
+{% endfilter %}{%- endmacro contain_pathparam_with_id -%}
 
 {%- macro parameters(endpoint) -%}
 {%- for parameter in endpoint.parameters.all -%}

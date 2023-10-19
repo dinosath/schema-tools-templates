@@ -1,0 +1,67 @@
+{# type=model,filename=src/main/java/%options.package%/resources/%model.name%Resource.java,min_version=0.2.0 #}
+{% import "macros.j2" as m -%}
+
+package {{options.package}}.resources;
+import {{options.package}}.models.*;
+import {{options.package}}.repositories.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import jakarta.persistence.*;
+import jakarta.transaction.*;
+import jakarta.validation.Valid;
+import jakarta.inject.*;
+
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+
+{% set create_resource = model.object and m::has_id(model=model) -%}
+{% set model_name_lower = model.name | camelcase -%}
+
+{% if create_resource -%}
+@Path("/{{ model_name_lower }}")
+{% endif -%}
+public class {{ model.name }}Resource{
+
+    {% if create_resource -%}
+    {% set id_property_type = m::id_type(model=model) -%}
+
+    @Inject
+    {{ model.name }}Repository {{ model_name_lower }}Repository;
+
+
+    @Transactional
+    @POST
+    public {{ model.name }} add{{ model.name }}(@Valid {{ model.name }} {{ model_name_lower }}){
+        return {{ model_name_lower }}Repository.save( {{ model_name_lower }} );
+    }
+
+    @GET
+    public Iterable<{{ model.name }}> get{{ model.name | plural }}(){
+        return {{ model_name_lower }}Repository.findAll();
+    }
+
+    @Path("/{id}")
+    @GET
+    public Optional<{{ model.name }}> get{{ model.name }}(@PathParam("id") {{ id_property_type }} id){
+        return {{ model_name_lower }}Repository.findById(id);
+    }
+
+    @Transactional
+    @Path("/{id}")
+    @DELETE
+    public void delete{{ model.name }}(@PathParam("id") {{ id_property_type }} id){
+        {{ model_name_lower }}Repository.deleteById(id);
+    }
+
+    @Transactional
+    @Path("/{id}")
+    @PUT
+    public {{ model.name }} update{{ model.name }}(@Valid {{ model.name }} {{ model_name_lower }}, @PathParam("id") {{ id_property_type }} id){
+        {{ model_name_lower }}.setId(id);
+        return {{ model_name_lower }}Repository.save({{ model_name_lower }});
+    }
+
+    {% endif -%}
+
+}

@@ -3,6 +3,7 @@
 
 package {{options.package}}.resources;
 import {{options.package}}.models.*;
+import {{options.package}}.repositories.*;
 import java.util.List;
 import java.util.Map;
 import jakarta.persistence.*;
@@ -15,23 +16,38 @@ import jakarta.ws.rs.core.MediaType;
 
 public class Resources{
 
-    @Inject
-    EntityManager em;
-    
     {% for endpoint in endpoints %}
-    @Transactional
-    {{ m::endpoint_consumes(endpoint=endpoint) }}
-    @Path("{{ endpoint.path }}")
-    @{{ endpoint.method | upper}}
+    {% set request_body_type_string = m::request_body_type_string(endpoint=endpoint) -%}
+    {% if response_type_string and endpoint.method|upper == "POST"-%}
+    //@Inject
+    //{{ request_body_type_string }}Repository {{ request_body_type_string | camelcase}}Repository;
+    {% endif -%}
+    {% endfor -%}
+    
+    {% for endpoint in endpoints -%}
+    {% set request_body_type_string = m::request_body_type_string(endpoint=endpoint) -%}
+    //@Transactional
+    //{{ m::endpoint_consumes(endpoint=endpoint) }}
+    //@Path("{{ endpoint.path }}")
+    //@{{ endpoint.method | upper}}
     {% set response_type = m::response_type(endpoint=endpoint) -%}
-    public {{ response_type }} {{endpoint.operation}}({{ m::request_arguments(endpoint=endpoint) }}){
-        {{ endpoint | json_encode() }}
-        {% if endpoint.method | upper == "POST" -%}
-        return 
+    //public {{ response_type }} {{endpoint.operation}}({{ m::request_arguments(endpoint=endpoint) }}){
+        {% if not response_type | trim == "void" -%}
+      //  return 
+        {% endif -%}
+        {%- if endpoint.method | upper == "POST" -%}
+        //{{ request_body_type_string | camelcase }}Repository.save( {{ request_body_type_string | camelcase }} );
+        {%- elif endpoint.method | upper == "PUT" and m::contain_pathparam_with_id(endpoint=endpoint) -%}
+        //{{ request_body_type_string | camelcase }}Repository.persist( {{ request_body_type_string | camelcase }} );
+        {%- elif endpoint.method | upper == "PUT" -%}
+        //{{ request_body_type_string | camelcase }}Repository.persist( {{ request_body_type_string | camelcase }} );
+        {%- elif endpoint.method | upper == "PUT" -%}
+        //{{ request_body_type_string | camelcase }}Repository.persist( {{ request_body_type_string | camelcase }} );
+        {%- elif endpoint.method | upper == "DELETE" -%}
+        {% set path_split = endpoint.path | split(pat="/") -%}
+        //{{ path_split | nth(n=1) }}Repository.delete( {{ path_split | nth(n=2) |replace(from="{", to="" )|replace(from="}", to="" )  }} );
         {% endif %}
-        {% if response_type == "void" -%}
-        return;
-        {% endif %}
-    }
+
+ //   }
     {% endfor -%}
 }
