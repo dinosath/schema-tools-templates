@@ -4,6 +4,12 @@
 package {{options.package}}.resources;
 import {{options.package}}.models.*;
 import {{options.package}}.repositories.*;
+import io.smallrye.common.annotation.RunOnVirtualThread;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.Uni;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.jboss.resteasy.reactive.RestStreamElementType;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,26 +33,42 @@ public class {{ model.name }}Resource{
     {% set id_property_type = m::id_type(model=model) -%}
 
     @Inject
+    @Channel("{{ model_name_lower | plural}}-out")
+    Multi<{{ model.name }}> {{ model_name_lower }}Channel;
+
+    @Inject
     {{ model.name }}Repository {{ model_name_lower }}Repository;
 
 
     @Transactional
     @POST
+    @RunOnVirtualThread
     public {{ model.name }} add{{ model.name }}(@Valid {{ model.name }} {{ model_name_lower }}){
         return {{ model_name_lower }}Repository.save( {{ model_name_lower }} );
     }
 
     @GET
+    @RunOnVirtualThread
     public Iterable<{{ model.name }}> get{{ model.name | plural }}(){
         return {{ model_name_lower }}Repository.findAll();
     }
 
+    @GET
+    @RestStreamElementType(MediaType.APPLICATION_JSON)
+    public Multi<{{ model.name }}> stream{{ model.name | plural }}(){
+        Multi<{{ model.name }}> {{ model.name | plural | camelcase }} =  Multi.createFrom().iterable( {{ model_name_lower }}Repository.findAll() );
+        return Multi.createBy().merging().streams({{ model.name | plural | camelcase }}, {{ model_name_lower }}Channel);
+
+    }
+
+    @RunOnVirtualThread
     @Path("/{id}")
     @GET
     public Optional<{{ model.name }}> get{{ model.name }}(@PathParam("id") {{ id_property_type }} id){
         return {{ model_name_lower }}Repository.findById(id);
     }
 
+    @RunOnVirtualThread
     @Transactional
     @Path("/{id}")
     @DELETE
@@ -54,6 +76,7 @@ public class {{ model.name }}Resource{
         {{ model_name_lower }}Repository.deleteById(id);
     }
 
+    @RunOnVirtualThread
     @Transactional
     @Path("/{id}")
     @PUT

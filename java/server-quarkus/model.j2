@@ -5,6 +5,10 @@ package {{options.package}}.models;
 {{m::model_imports(model=model,package=options.package)}}
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.CascadeType;
+
 {% if model.object and m::has_id(model=model) -%}
 @Entity
 {% endif -%}
@@ -37,6 +41,15 @@ public {%- if model.enum %} enum {%- else %} class {% endif %} {{ model.name }}{
     {% if  property_name=="id"-%}
     @Id
     @GeneratedValue
+    {% elif  property.type == "object" and property.model and m::has_id(model=property.model.model) -%}
+    @OneToOne(cascade = CascadeType.PERSIST)
+    {% elif  property.type == "array" and property.model.type=="object" -%}
+    {{ property | json_encode() }}
+    {% if m::has_id(model=property.model.model) -%}
+    @ManyToMany
+    {% else -%}
+    @ElementCollection
+    {% endif -%}
     {% endif -%}
     private {{ m::type(model = property) }} {{ property_name }};
     {% endfor -%}
