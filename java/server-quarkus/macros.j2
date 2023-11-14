@@ -74,7 +74,6 @@ true
 {% endfilter %}{% endmacro get_id_property %}
 
 {% macro get_id_property_type(model) %}{% filter nospaces %}
-{{self::get_id_property(model=model)|json_encode()}}
 {% endfilter %}{% endmacro get_id_property_type %}
 
 {% macro id_type(model) %}{% filter nospaces %}
@@ -130,7 +129,6 @@ void
 
 {%- macro contain_pathparam_with_id(endpoint) -%}{% filter trim %}
 {%- for parameter in endpoint.parameters.all -%}
-{{parameter|json_encode()}}
 {%- endfor %}
 {% endfilter %}{%- endmacro contain_pathparam_with_id -%}
 

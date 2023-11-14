@@ -44,7 +44,6 @@ public {%- if model.enum %} enum {%- else %} class {% endif %} {{ model.name }}{
     {% elif  property.type == "object" and property.model and m::has_id(model=property.model.model) -%}
     @OneToOne(cascade = CascadeType.PERSIST)
     {% elif  property.type == "array" and property.model.type=="object" -%}
-    {{ property | json_encode() }}
     {% if m::has_id(model=property.model.model) -%}
     @ManyToMany
     {% else -%}
