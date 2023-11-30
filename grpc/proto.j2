@@ -1,0 +1,30 @@
+{# type=models,filename=test.proto,min_version=0.2.0 #}
+syntax = "proto3";
+
+package helloworld;
+import "google/protobuf/empty.proto";
+
+{% for model in models %}
+{%- set name = model.name| camelcase | capitalize -%}
+
+message {{ name }} {
+  {%- for property in model.object.properties %}
+  {% if property.required %}required{% endif %} {{ property.type }} {{ property.name }} = {{ loop.index }};
+  {%- endfor %}
+}
+
+service {{ name }} {
+    rpc Create{{ name }} ({{ name }}) returns ({{ name }});
+    rpc Get{{ name }} ({{ name }}) returns ({{ name }});
+    rpc Update{{ name }} ({{ name }}) returns ({{ name }});
+    rpc Delete{{ name }} ({{ name }}) returns (google.protobuf.Empty);
+
+    rpc List{{ name }} ({{ name }}) returns (stream {{ name }});
+
+    rpc BulkCreate{{ name }} (stream {{ name }}) returns (stream {{ name }});
+    rpc BulkUpdate{{ name }} (stream {{ name }}) returns (stream {{ name }});
+    rpc BulkDelete{{ name }} (stream {{ name }}) returns (stream {{ name }});
+
+    rpc Watch{{ name }} (stream {{ name }}) returns (stream {{ name }});
+}
+{% endfor %}
