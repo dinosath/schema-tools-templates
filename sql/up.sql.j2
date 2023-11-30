@@ -1,0 +1,79 @@
+{# type=models,filename=up.sql,min_version=0.2.0 #}
+{% for model in models %}
+
+CREATE TABLE {{ model.name|lower }} (
+  {% for property in model.object.properties %}
+    {{ property.name }} {{ self::get_sql_type(property=property) }}
+    {% if property.nullable %} NULL{% endif %},
+  {% endfor %}
+  PRIMARY KEY ({{ model.name|lower }}_id)
+);
+
+-- Create enums if any
+{% for property in model.object.properties %}
+  {% if property.type == "enum" %}
+    CREATE TYPE {{ model.name }}_{{ property.name }}_type AS ENUM (
+      {% for enum_value in property.enum_values %}
+        '{{ enum_value }}'{% if not loop.last %},{% endif %}
+      {% endfor %}
+    );
+  {% endif %}
+{% endfor %}
+
+{% endfor %}
+
+{% macro get_sql_type(property) %}
+  {%- if property.type == "string" and property.validation is defined and property.validation.format is defined %}
+    {%- if property.validation.format == "uuid" %}
+      UUID
+    {%- elif property.validation.format == "time" %}
+      TIME
+    {%- elif property.validation.format == "date-time" %}
+      TIMESTAMP
+    {%- else %}
+      VARCHAR({{ property.validation.maxLength|default(255) }})
+    {%- endif %}
+  {%- elif property.type == "integer" %}
+    {%- if property.maximum is defined and property.maximum <= 32767 %}
+      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+        SMALLSERIAL
+      {%- else %}
+        SMALLINT
+      {%- endif %}
+    {%- elif property.maximum is defined and property.maximum <= 2147483647 %}
+      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+        SERIAL
+      {%- else %}
+        INT
+      {%- endif %}
+    {%- else %}
+      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+        BIGSERIAL
+      {%- else %}
+        BIGINT
+      {%- endif %}
+    {%- endif %}
+  {%- elif property.type == "number" %}
+    {%- if property.validation.multipleOf is defined and property.validation.multipleOf == 1 %}
+      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+        INTEGER
+      {%- else %}
+        SMALLINT
+      {%- endif %}
+    {%- else %}
+      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+        NUMERIC
+      {%- else %}
+        DECIMAL
+      {%- endif %}
+    {%- endif %}
+  {%- elif property.type == "boolean" %}
+    BOOLEAN
+  {%- elif property.type == "object" %}
+    JSONB
+  {%- elif property.type == "enum" %}
+    {{ object.name }}_{{ property.name }}_type
+  {%- else %}
+    UNKNOWN_TYPE
+  {%- endif %}
+{% endmacro get_sql_type %}
