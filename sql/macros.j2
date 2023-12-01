@@ -1,3 +1,46 @@
+{# find model original name by comparing the model with the properties of another model #}
+{% macro get_original_model_name(property, models) -%}
+    {% if property.type == "array" and property.model %}
+        {% for model in models -%}
+            {% for prop in model.object.properties -%}
+                {%- if prop.type == "object" and prop.model.name == property.model.name -%}
+                    {{ model.object.name }}
+                    {% break %}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+    {% else %}
+        {% for model in models -%}
+            {% for prop in model.object.properties -%}
+                {%- if prop.type == "object" and prop.model.name == property.type -%}
+                    {{ model.object.name }}
+                    {% break %}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+    {% endif %}
+{%- endmacro %}
+
+{% macro is_nested(model, models) -%}
+    {% for other_model in models -%}
+        {%- if other_model.object.name != model.object.name -%}
+            {% for property in other_model.object.properties -%}
+                {%- if property.type == "object" and property.model.name == model.object.name -%}
+                    {% if model.object.name in options.entities and model.object.name != property.name %}
+                        true
+                    {% else %}
+                        false
+                    {% endif %}
+                    {% break %}
+                {%- endif %}
+            {%- endfor %}
+        {%- endif %}
+    {%- endfor %}
+    false
+{%- endmacro %}
+
+
+
 {% macro get_id_property(model) %}{% filter nospaces %}
 {% if model.object -%}
 {% for property in model.object.properties -%}
