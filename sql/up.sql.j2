@@ -23,7 +23,7 @@ CREATE TABLE {{ model.name|lower }} (
 {% endfor %}
 
 {% macro get_sql_type(property) %}
-  {%- if property.type == "string" and property.validation is defined and property.validation.format is defined %}
+  {%- if property.type == "string" and property.validation and property.validation.format %}
     {%- if property.validation.format == "uuid" %}
       UUID
     {%- elif property.validation.format == "time" %}
@@ -31,37 +31,37 @@ CREATE TABLE {{ model.name|lower }} (
     {%- elif property.validation.format == "date-time" %}
       TIMESTAMP
     {%- else %}
-      VARCHAR({{ property.validation.maxLength|default(255) }})
+      VARCHAR({% if property.validation and property.validation.maxLength %}{{ property.validation.maxLength }}{% else %}255{%- endif %})
     {%- endif %}
   {%- elif property.type == "integer" %}
-    {%- if property.maximum is defined and property.maximum <= 32767 %}
-      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+    {%- if property.maximum and property.maximum <= 32767 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
         SMALLSERIAL
       {%- else %}
         SMALLINT
       {%- endif %}
-    {%- elif property.maximum is defined and property.maximum <= 2147483647 %}
-      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+    {%- elif property.maximum and property.maximum <= 2147483647 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
         SERIAL
       {%- else %}
         INT
       {%- endif %}
     {%- else %}
-      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
         BIGSERIAL
       {%- else %}
         BIGINT
       {%- endif %}
     {%- endif %}
   {%- elif property.type == "number" %}
-    {%- if property.validation.multipleOf is defined and property.validation.multipleOf == 1 %}
-      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+    {%- if property.validation.multipleOf and property.validation.multipleOf == 1 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
         INTEGER
       {%- else %}
         SMALLINT
       {%- endif %}
     {%- else %}
-      {%- if property.validation.minimum is defined and property.validation.minimum > 0 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
         NUMERIC
       {%- else %}
         DECIMAL
