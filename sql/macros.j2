@@ -1,29 +1,54 @@
-{# type=models,filename=up.sql,min_version=0.2.0 #}
-{% for model in models %}
+{% macro get_id_property(model) %}{% filter nospaces %}
+{% if model.object -%}
+{% for property in model.object.properties -%}
+{% if property.name == "id" -%}
+{{ property }}
+{% endif %}
+{% endfor -%}
+{% endif %}
+{% endfilter %}{% endmacro get_id_property %}
 
-CREATE TABLE {{ model.name|lower }} (
-  {% for property in model.object.properties %}
-    {{ property.name }} {{ self::get_sql_type(property=property) }}
-    {% if property.nullable %} NULL{% endif %},
-  {% endfor %}
-  PRIMARY KEY ({{ model.name|lower }}_id)
-);
+{% macro is_primary_key(property) -%}
+    {{ property.name == "id" or property.x and property.x.id and property.x.id == true }}
+{%- endmacro %}
 
--- Create enums if any
-{% for property in model.object.properties %}
-  {% if property.type == "enum" %}
-    CREATE TYPE {{ model.name }}_{{ property.name }}_type AS ENUM (
-      {% for enum_value in property.enum_values %}
-        '{{ enum_value }}'{% if not loop.last %},{% endif %}
-      {% endfor %}
-    );
-  {% endif %}
-{% endfor %}
+{% macro model_has_primary_key(model) -%}
+    {% for property in model.object.properties -%}
+        {% if self::is_primary_key(property=property) %}
+            true
+            {% break %}
+        {% endif %}
+        {%- if loop.last -%}
+            false
+        {%- endif %}
+    {%- endfor %}
+{%- endmacro %}
 
-{% endfor %}
 
-{% macro get_sql_type(property) %}
-  {%- if property.type == "string" and property.validation and property.validation.format %}
+{% macro has_primary_key(model) %}{% filter nospaces %}
+{% set has_primary_key = false %}
+{% if model.object -%}
+{% for property in model.object.properties -%}
+{% set has_primary_key = true %}
+{% endfor -%}
+{% endif %}
+{{ has_primary_key }}
+{% endfilter %}{% endmacro has_primary_key %}
+
+{% macro property_is_primary_key(property) %}{% filter nospaces %}
+{% if property.name == "id" or property.x.id and property.x.id=='true'-%}
+true
+{% else %}
+false
+{% endif %}
+{% endfilter %}{% endmacro property_is_primary_key %}
+
+
+
+{%- macro get_sql_type(property) -%}
+{% filter nospaces %}
+  {%- if property.type == "string" %}
+  {%- if property.validation and property.validation.format %}
     {%- if property.validation.format == "uuid" %}
       UUID
     {%- elif property.validation.format == "time" %}
@@ -33,6 +58,9 @@ CREATE TABLE {{ model.name|lower }} (
     {%- else %}
       VARCHAR({% if property.validation and property.validation.maxLength %}{{ property.validation.maxLength }}{% else %}255{%- endif %})
     {%- endif %}
+  {%- else %}
+  VARCHAR(255)
+  {%- endif %}
   {%- elif property.type == "integer" %}
     {%- if property.maximum and property.maximum <= 32767 %}
       {%- if property.validation.minimum and property.validation.minimum > 0 %}
@@ -76,4 +104,5 @@ CREATE TABLE {{ model.name|lower }} (
   {%- else %}
     UNKNOWN_TYPE
   {%- endif %}
-{% endmacro get_sql_type %}
+{% endfilter %}
+{%- endmacro get_sql_type -%}

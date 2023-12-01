@@ -1,0 +1,31 @@
+{# type=models,filename=up.sql,min_version=0.2.0 #}
+{%- import "macros.j2" as m -%}
+
+{%- for model in models %}
+CREATE TABLE {{ model.name|lower }} (
+  {%- for property in model.object.properties %}
+  {{ property.name }} {{ m::get_sql_type(property=property) }}    
+  {%- if property.nullable -%}
+  NULL
+  {% elif m::is_primary_key(property=property)=="true" %}
+  PRIMARY KEY
+  {%- endif -%}
+  {%- if not loop.last -%},{%- endif %}
+  {%- endfor -%}
+  
+  {%- if m::model_has_primary_key(model=model)=="false" -%}
+  ,
+  id UUID PRIMARY KEY
+  {%- endif %}
+);
+{%- for property in model.object.properties -%}
+  {%- if property.type == "enum" -%}
+    CREATE TYPE {{ model.name }}_{{ property.name }}_type AS ENUM (
+      {%- for enum_value in property.enum_values %}
+        '{{ enum_value }}'{% if not loop.last %},{% endif %}
+      {%- endfor %}
+    );
+  {%- endif %}
+{%- endfor %}
+
+{%- endfor -%}
