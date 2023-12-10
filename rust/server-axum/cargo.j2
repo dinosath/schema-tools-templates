@@ -9,23 +9,23 @@ edition = "2021"
 testcontainers = "0.14.0"
 
 [dependencies]
-tokio = { version = "1.0", features = ["full"] }
-axum = "0.6"
+tokio = { version = "1.35", features = ["full"] }
+axum = "0.7"
 bb8 = "0.8"
 diesel = { version = "2", features = ["chrono", "postgres"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
 dotenv = "0.15.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-uuid = { version = "1.3", features = ["serde", "v4"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["serde", "v4"] }
 validator = { version = "0.16", features = ["derive"] }
-lazy_static = "1.4.0"
+lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tracing-opentelemetry = "0.21"
-opentelemetry = { version = "0.20", features = ["rt-tokio", "trace", "metrics"] }
-opentelemetry-otlp = { version = "0.13", features = ["tonic", "metrics"] }
+tracing-opentelemetry = "0.22"
+opentelemetry = { version = "0.21", features = ["trace", "metrics"] }
+opentelemetry-otlp = { version = "0.14", features = ["tonic", "metrics"] }
 futures-core = "0.3"
 futures = "0.3"
 async-trait = "0.1"

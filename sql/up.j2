@@ -1,9 +1,9 @@
-{# type=models,filename=up.sql,min_version=0.2.0 #}
+{# type=models,filename=migrations/create_models/up.sql,min_version=0.2.0 #}
 {%- import "macros.j2" as m -%}
 
 {# TODO: create table only if the original name of the model is in option.entities. e.g. by default an embedded model is not created #}
 {%- for model in models %}
-CREATE TABLE {{ model.object.name|lower }} (
+CREATE TABLE {{ model.object.name|plural|lower }} (
   {%- for property in model.object.properties %}
   {{ property.name }} {{ m::get_sql_type(property=property) }}    
   {%- if property.nullable -%}
@@ -21,7 +21,7 @@ CREATE TABLE {{ model.object.name|lower }} (
 );
 {%- for property in model.object.properties -%}
   {%- if property.type == "enum" -%}
-    CREATE TYPE {{ model.object.name }}_{{ property.name }}_type AS ENUM (
+    CREATE TYPE {{ model.object.name|plural|lower}}_{{ property.name }}_type AS ENUM (
       {%- for enum_value in property.enum_values %}
         '{{ enum_value }}'{% if not loop.last %},{% endif %}
       {%- endfor %}

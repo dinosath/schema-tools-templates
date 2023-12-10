@@ -5,24 +5,22 @@
 use serde::{Serialize, Deserialize, Deserializer};
 use std::collections::BTreeMap;
 use diesel::{Insertable, Queryable, Selectable, Identifiable};
-use crate::schemas::schema::*;
-use crate::schema::*;
-{% if not options.skipValidate %}
+{%- if not options.skipValidate %}
 use validator::Validate;
 {% endif %}
 {% block use %}{% endblock use %}
-
-{% if formats is containing("decimal") %}
+{%- if formats is containing("decimal") %}
 use rust_decimal::Decimal;
 {% endif %}
-{% if formats is containing("date-time") %}
+{%- if formats is containing("date-time") %}
 use chrono::{DateTime, Utc};
-{% endif %}
+{%- endif %}
 
-{% for model in models %}
+{%- for model in models %}
 {%- if model.object %}
 
-#[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Queryable, Identifiable, Selectable)]
+#[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Queryable, Selectable)]
+#[diesel(table_name = crate::schema::{{ model.object.name | lower }})]
 pub struct {{ m::model_name(name = model.object.name) }} {
     {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
     {% for property in filtered_properties -%}

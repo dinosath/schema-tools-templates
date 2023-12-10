@@ -1,0 +1,97 @@
+{# type=models,filename=src/services.rs,min_version=0.5.0 #}
+{%- import "macros.j2" as m -%}
+{%- import "extra.j2" as e -%}
+{{ m::do_not_modify() }}
+
+use axum::{
+    body::{Body, HttpBody},
+    extract::{FromRequest, State, Path},
+    handler::{future::IntoServiceFuture, Handler},
+    http::Request,
+    http::{request::Parts, StatusCode},
+    response::{Json, IntoResponse, Response},
+    routing::{self, on_service, MethodFilter},
+    Router, BoxError,
+};
+use futures::{future::LocalBoxFuture, Future};
+use std::{
+    convert::Infallible,
+    marker::PhantomData,
+    pin::Pin,
+    task::{Context, Poll},
+};
+use diesel_async::{
+    pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
+};
+use crate::Pool;
+use crate::internal_error;
+use crate::models::{*};
+use crate::schema::{*};
+
+{%- for model in models %}
+{%- set model_name = model.object.name %}
+{%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
+pub async fn get_{{ model_name | plural | lower }}(State(pool): State<Pool>) -> Result<Json<Vec<{{model.object.name}}>>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let res = diesel::insert_into(users::table)
+        .values(new_user)
+        .returning(User::as_returning())
+        .get_result(&mut conn)
+        .await
+        .map_err(internal_error)?;
+    Ok(Json(res))
+}
+
+pub async fn post_{{ model_name | plural | lower }}(State(pool): State<Pool>) -> Result<Json<{{model.object.name}}>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let result : {{model.object.name}} = Default::default();
+    Ok(Json(res))
+}
+
+pub async fn get_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let result : {{model.object.name}} = Default::default();
+    Ok(Json(res))
+}
+
+pub async fn update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let res = diesel::insert_into(users::table)
+        .values(new_user)
+        .returning(User::as_returning())
+        .get_result(&mut conn)
+        .await
+        .map_err(internal_error)?;
+    Ok(Json(res))
+}
+
+pub async fn partial_update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let res = diesel::insert_into(users::table)
+        .values(new_user)
+        .returning(User::as_returning())
+        .get_result(&mut conn)
+        .await
+        .map_err(internal_error)?;
+    Ok(Json(res))
+}
+
+pub async fn delete_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+    let mut conn = pool.get().await.map_err(internal_error)?;
+
+    let res = diesel::insert_into(users::table)
+        .values(new_user)
+        .returning(User::as_returning())
+        .get_result(&mut conn)
+        .await
+        .map_err(internal_error)?;
+    Ok(Json(res))
+}
+
+{%- endif %}
+{% endfor %}

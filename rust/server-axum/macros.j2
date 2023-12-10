@@ -1,7 +1,8 @@
 {% macro property_name(name) %}{% filter nospaces %}
-    {{ name | replace(from="-", to="") | snakecase }}
+    {% set output = name|replace(from="-", to="")|lower %}
+    {{ output }}
 
-    {% if name | snakecase in [
+    {% if output in [
         "false", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move",
         "mut", "pub", "ref", "return", "self", "static", "struct", "super", "trait",
         "true", "type", "unsafe", "use", "where", "while", "async", "await", "dyn",
@@ -191,3 +192,156 @@
         1
     {% endif %}
 {% endfilter %}{% endmacro need_nested_validation %}
+
+{% macro get_original_model_name(property, models) -%}
+    {% if property.type == "array" and property.model %}
+        {% for model in models -%}
+            {% for prop in model.object.properties -%}
+                {%- if prop.type == "object" and prop.model.name == property.model.name -%}
+                    {{ model.object.name }}
+                    {% break %}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+    {% else %}
+        {% for model in models -%}
+            {% for prop in model.object.properties -%}
+                {%- if prop.type == "object" and prop.model.name == property.type -%}
+                    {{ model.object.name }}
+                    {% break %}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+    {% endif %}
+{%- endmacro %}
+
+{% macro is_nested(model, models) -%}
+    {% for other_model in models -%}
+        {%- if other_model.object.name != model.object.name -%}
+            {% for property in other_model.object.properties -%}
+                {%- if property.type == "object" and property.model.name == model.object.name -%}
+                    {% if model.object.name in options.entities and model.object.name != property.name %}
+                        true
+                    {% else %}
+                        false
+                    {% endif %}
+                    {% break %}
+                {%- endif %}
+            {%- endfor %}
+        {%- endif %}
+    {%- endfor %}
+    false
+{%- endmacro %}
+
+
+
+{% macro get_id_property(model) %}{% filter nospaces %}
+{% if model.object -%}
+{% for property in model.object.properties -%}
+{% if property.name == "id" -%}
+{{ property }}
+{% endif %}
+{% endfor -%}
+{% endif %}
+{% endfilter %}{% endmacro get_id_property %}
+
+{% macro is_primary_key(property) -%}
+    {{ property.name == "id" or property.x and property.x.id and property.x.id == true }}
+{%- endmacro %}
+
+{% macro model_has_primary_key(model) -%}
+{% filter nospaces %}
+    {% for property in model.object.properties -%}
+        {% if self::is_primary_key(property=property)=="true" %}
+            true
+            {% break %}
+        {% endif %}
+        {%- if loop.last -%}
+            false
+        {%- endif %}
+    {%- endfor %}
+{% endfilter %}
+{%- endmacro %}
+
+
+{% macro has_primary_key(model) %}{% filter nospaces %}
+{% set has_primary_key = false %}
+{% if model.object -%}
+{% for property in model.object.properties -%}
+{% set has_primary_key = true %}
+{% endfor -%}
+{% endif %}
+{{ has_primary_key }}
+{% endfilter %}{% endmacro has_primary_key %}
+
+{% macro property_is_primary_key(property) %}{% filter nospaces %}
+{% if property.name == "id" or property.x.id and property.x.id=='true'-%}
+true
+{% else %}
+false
+{% endif %}
+{% endfilter %}{% endmacro property_is_primary_key %}
+
+
+
+{%- macro get_sql_type(property) -%}
+{% filter nospaces %}
+  {%- if property.type == "string" %}
+  {%- if property.validation and property.validation.format %}
+    {%- if property.validation.format == "uuid" %}
+      UUID
+    {%- elif property.validation.format == "time" %}
+      TIME
+    {%- elif property.validation.format == "date-time" %}
+      TIMESTAMP
+    {%- else %}
+      VARCHAR({% if property.validation and property.validation.maxLength %}{{ property.validation.maxLength }}{% else %}255{%- endif %})
+    {%- endif %}
+  {%- else %}
+  VARCHAR(255)
+  {%- endif %}
+  {%- elif property.type == "integer" %}
+    {%- if property.maximum and property.maximum <= 32767 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
+        SMALLSERIAL
+      {%- else %}
+        SMALLINT
+      {%- endif %}
+    {%- elif property.maximum and property.maximum <= 2147483647 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
+        SERIAL
+      {%- else %}
+        INT
+      {%- endif %}
+    {%- else %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
+        BIGSERIAL
+      {%- else %}
+        BIGINT
+      {%- endif %}
+    {%- endif %}
+  {%- elif property.type == "number" %}
+    {%- if property.validation.multipleOf and property.validation.multipleOf == 1 %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
+        INTEGER
+      {%- else %}
+        SMALLINT
+      {%- endif %}
+    {%- else %}
+      {%- if property.validation.minimum and property.validation.minimum > 0 %}
+        NUMERIC
+      {%- else %}
+        DECIMAL
+      {%- endif %}
+    {%- endif %}
+  {%- elif property.type == "boolean" %}
+    BOOLEAN
+  {%- elif property.type == "object" %}
+    JSONB
+  {%- elif property.type == "enum" %}
+    {{ object.name }}_{{ property.name }}_type
+  {%- else %}
+    UNKNOWN_TYPE
+  {%- endif %}
+{% endfilter %}
+{%- endmacro get_sql_type -%}
