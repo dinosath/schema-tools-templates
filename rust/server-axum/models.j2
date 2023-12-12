@@ -4,26 +4,30 @@
 {{ m::do_not_modify() }}
 use serde::{Serialize, Deserialize, Deserializer};
 use std::collections::BTreeMap;
-use diesel::{Insertable, Queryable, Selectable, Identifiable};
+use diesel::{Insertable, Queryable, Selectable, Identifiable, AsChangeset};
 {%- if not options.skipValidate %}
 use validator::Validate;
-{% endif %}
+{%- endif %}
 {% block use %}{% endblock use %}
 {%- if formats is containing("decimal") %}
 use rust_decimal::Decimal;
-{% endif %}
+{%- endif %}
 {%- if formats is containing("date-time") %}
 use chrono::{DateTime, Utc};
 {%- endif %}
-
 {%- for model in models %}
+{%- if m::has_primary_key(model=model)=="false"%}
+use uuid::Uuid;
+{%- endif %}
 {%- if model.object %}
-
-#[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Queryable, Selectable)]
+#[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Queryable, Selectable, AsChangeset)]
 #[diesel(table_name = crate::schema::{{ model.object.name | lower }})]
 pub struct {{ m::model_name(name = model.object.name) }} {
+    {%- if m::has_primary_key(model=model)=="false"%}
+    id: Uuid,
+    {%- endif %}
     {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
-    {% for property in filtered_properties -%}
+    {%- for property in filtered_properties -%}
     {% if property.validation and property.type != 'enum' %}
     {% if m::get_validation(validation = property.validation) | length %}
     {% if not options.skipValidate %}#[validate({{ m::get_validation(validation = property.validation) }})]{% endif %}
@@ -36,9 +40,35 @@ pub struct {{ m::model_name(name = model.object.name) }} {
     {%- endfor %}
 }
 
+#[derive(Deserialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Insertable)]
+#[diesel(table_name = crate::schema::{{ model.object.name | lower }})]
+pub struct {{ m::model_name(name = model.object.name) }}Dto {
+    {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
+    {%- for property in filtered_properties -%}
+    {% if property.validation and property.type != 'enum' %}
+    {% if m::get_validation(validation = property.validation) | length %}
+    {% if not options.skipValidate %}#[validate({{ m::get_validation(validation = property.validation) }})]{% endif %}
+    {% endif %}
+    {% elif m::need_nested_validation(property=property)%}
+    {% if not options.skipValidate %}#[validate]{% endif %}
+    {% endif %}
+    #[serde(rename = "{{ property.name }}"{% if not property.required and property.nullable %}, default, deserialize_with = "optional_nullable"{% elif not property.required %}, skip_serializing_if = "Option::is_none"{% endif %})]
+    pub {{ m::property_name(name = property.name) }}: {% if not property.required %}Option<{% endif %}{{ m::type(property = property) }}{% if not property.required %}>{% endif %},
+    {%- endfor %}
+}
+
+
 impl {{ m::model_name(name = model.object.name) }} { {# if sort required first #}
-    pub fn new({%- for property in filtered_properties -%}{{ m::property_name(name = property.name) }}: {% if not property.required %}Option<{% endif %}{{ m::type(property = property) }}{% if not property.required %}>{% endif %}, {% endfor %}) -> Self {
+    pub fn new(
+        {%- if m::has_primary_key(model=model)=="false"-%}
+            id:Uuid,
+        {%- endif -%}
+        
+        {%- for property in filtered_properties -%}{{ m::property_name(name = property.name) }}: {% if not property.required %}Option<{% endif %}{{ m::type(property = property) }}{% if not property.required %}>{% endif %}, {% endfor %}) -> Self {
         Self {
+            {% if m::has_primary_key(model=model)=="false"%}
+            id,
+            {% endif %}
             {% for property in filtered_properties %}{{ m::property_name(name = property.name) }},
             {% endfor %}
         }
@@ -181,13 +211,6 @@ impl Validate for {{ m::model_name(name = model.wrapper.name) }} {
 {%- elif model.primitive %}
 pub type {{ m::model_name(name = model.primitive.name) }} = {{ m::type(property = model.primitive) }};
 {% endif %}
-{% endfor %}
-
-pub fn optional_nullable<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
-    where T: Deserialize<'de>,
-          D: Deserializer<'de>
-{
-    Deserialize::deserialize(deserializer).map(Some)
-}
+{%- endfor %}
 
 {% block end %}{% endblock end %}

@@ -4,6 +4,14 @@
 {# TODO: create table only if the original name of the model is in option.entities. e.g. by default an embedded model is not created #}
 {%- for model in models %}
 CREATE TABLE {{ model.object.name|plural|lower }} (
+  {%- if m::model_has_primary_key(model=model)=="false" %}
+  id UUID PRIMARY KEY
+  {%- if model.object.properties | length > 0 -%}
+  ,
+  {%- endif %}
+  {%- endif %}
+
+
   {%- for property in model.object.properties %}
   {{ property.name }} {{ m::get_sql_type(property=property) }}    
   {%- if property.nullable -%}
@@ -12,12 +20,7 @@ CREATE TABLE {{ model.object.name|plural|lower }} (
   PRIMARY KEY
   {%- endif -%}
   {%- if not loop.last -%},{%- endif %}
-  {%- endfor -%}
-  
-  {%- if m::model_has_primary_key(model=model)=="false" -%}
-  ,
-  id UUID PRIMARY KEY
-  {%- endif %}
+  {%- endfor %}
 );
 {%- for property in model.object.properties -%}
   {%- if property.type == "enum" -%}

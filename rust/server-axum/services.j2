@@ -27,70 +27,75 @@ use crate::Pool;
 use crate::internal_error;
 use crate::models::{*};
 use crate::schema::{*};
-
+use diesel::QueryDsl;
+use diesel::SelectableHelper;
 {%- for model in models %}
 {%- set model_name = model.object.name %}
 {%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
 pub async fn get_{{ model_name | plural | lower }}(State(pool): State<Pool>) -> Result<Json<Vec<{{model.object.name}}>>, (StatusCode, String)> {
     let mut conn = pool.get().await.map_err(internal_error)?;
 
-    let res = diesel::insert_into(users::table)
-        .values(new_user)
-        .returning(User::as_returning())
-        .get_result(&mut conn)
+    let res = {{ model_name | lower }}::table
+        .select({{ model_name }}::as_select())
+        .load(&mut conn)
         .await
         .map_err(internal_error)?;
     Ok(Json(res))
 }
 
-pub async fn post_{{ model_name | plural | lower }}(State(pool): State<Pool>) -> Result<Json<{{model.object.name}}>, (StatusCode, String)> {
+pub async fn post_{{ model_name | plural | lower }}(State(pool): State<Pool>, Json(new_value): Json<{{ model_name }}Dto>) -> Result<Json<{{model.object.name}}>, (StatusCode, String)> {
     let mut conn = pool.get().await.map_err(internal_error)?;
 
-    let result : {{model.object.name}} = Default::default();
+    let res = diesel::insert_into({{ model_name | lower }}::table)
+        .values(new_value)
+        .returning({{ model_name }}::as_returning())
+        .get_result(&mut conn)
+        .await
+        .map_err(internal_error)?;
     Ok(Json(res))
 }
 
 pub async fn get_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
     let mut conn = pool.get().await.map_err(internal_error)?;
 
-    let result : {{model.object.name}} = Default::default();
+    let res = {{ model_name | lower }}::table
+        .find(id)
+        .select({{ model_name }}::as_select())
+        .first(&mut conn)
+        .await
+        .map_err(internal_error)?;
+
     Ok(Json(res))
 }
 
-pub async fn update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+pub async fn update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>, Json(new_value): Json<{{ model_name }}>) -> Result<StatusCode, String> {
     let mut conn = pool.get().await.map_err(internal_error)?;
-
-    let res = diesel::insert_into(users::table)
-        .values(new_user)
-        .returning(User::as_returning())
-        .get_result(&mut conn)
+    let res = diesel::update({{ model_name | lower }}::table)
+        .set(new_value)
+        .execute(&mut conn)
         .await
         .map_err(internal_error)?;
-    Ok(Json(res))
+    Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn partial_update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+pub async fn partial_update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>, Json(new_value): Json<{{ model_name }}>) -> Result<StatusCode, String> {
     let mut conn = pool.get().await.map_err(internal_error)?;
-
-    let res = diesel::insert_into(users::table)
-        .values(new_user)
-        .returning(User::as_returning())
-        .get_result(&mut conn)
+    let res = diesel::update({{ model_name | lower }}::table)
+        .set(new_value)
+        .execute(&mut conn)
         .await
         .map_err(internal_error)?;
-    Ok(Json(res))
+    Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn delete_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<{{ model.object.name }}>, (StatusCode, String)> {
+pub async fn delete_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<StatusCode, String> {
     let mut conn = pool.get().await.map_err(internal_error)?;
 
-    let res = diesel::insert_into(users::table)
-        .values(new_user)
-        .returning(User::as_returning())
-        .get_result(&mut conn)
+    diesel::delete({{ model_name | lower }}::table.filter(id.eq(id)))
+        .execute(&mut conn)
         .await
         .map_err(internal_error)?;
-    Ok(Json(res))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 {%- endif %}
