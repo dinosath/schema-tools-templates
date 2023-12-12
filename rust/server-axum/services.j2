@@ -29,6 +29,8 @@ use crate::models::{*};
 use crate::schema::{*};
 use diesel::QueryDsl;
 use diesel::SelectableHelper;
+use diesel::ExpressionMethods;
+use serde_json::json;
 {%- for model in models %}
 {%- set model_name = model.object.name %}
 {%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
@@ -68,34 +70,34 @@ pub async fn get_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Pat
     Ok(Json(res))
 }
 
-pub async fn update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>, Json(new_value): Json<{{ model_name }}>) -> Result<StatusCode, String> {
+pub async fn update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>, Json(new_value): Json<{{ model_name }}>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let mut conn = pool.get().await.map_err(internal_error)?;
     let res = diesel::update({{ model_name | lower }}::table)
         .set(new_value)
         .execute(&mut conn)
         .await
         .map_err(internal_error)?;
-    Ok(StatusCode::NO_CONTENT)
+        Ok(Json(json!({})))
 }
 
-pub async fn partial_update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>, Json(new_value): Json<{{ model_name }}>) -> Result<StatusCode, String> {
+pub async fn partial_update_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>, Json(new_value): Json<{{ model_name }}>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let mut conn = pool.get().await.map_err(internal_error)?;
     let res = diesel::update({{ model_name | lower }}::table)
         .set(new_value)
         .execute(&mut conn)
         .await
         .map_err(internal_error)?;
-    Ok(StatusCode::NO_CONTENT)
+        Ok(Json(json!({})))
 }
 
-pub async fn delete_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<StatusCode, String> {
+pub async fn delete_{{ model_name | lower }}(State(pool): State<Pool>,Path(id): Path<uuid::Uuid>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let mut conn = pool.get().await.map_err(internal_error)?;
 
-    diesel::delete({{ model_name | lower }}::table.filter(id.eq(id)))
+    diesel::delete({{ model_name | lower }}::table.filter({{ model_name | lower }}::id.eq(id)))
         .execute(&mut conn)
         .await
         .map_err(internal_error)?;
-    Ok(StatusCode::NO_CONTENT)
+        Ok(Json(json!({})))
 }
 
 {%- endif %}
