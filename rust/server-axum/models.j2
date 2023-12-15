@@ -24,7 +24,7 @@ use uuid::Uuid;
 #[diesel(table_name = crate::schema::{{ model.object.name | lower }})]
 pub struct {{ m::model_name(name = model.object.name) }} {
     {%- if m::has_primary_key(model=model)=="false"%}
-    id: Uuid,
+    id: i64,
     {%- endif %}
     {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
     {%- for property in filtered_properties -%}
@@ -61,7 +61,7 @@ pub struct {{ m::model_name(name = model.object.name) }}Dto {
 impl {{ m::model_name(name = model.object.name) }} { {# if sort required first #}
     pub fn new(
         {%- if m::has_primary_key(model=model)=="false"-%}
-            id:Uuid,
+            id:i64,
         {%- endif -%}
         
         {%- for property in filtered_properties -%}{{ m::property_name(name = property.name) }}: {% if not property.required %}Option<{% endif %}{{ m::type(property = property) }}{% if not property.required %}>{% endif %}, {% endfor %}) -> Self {
