@@ -1,7 +1,6 @@
 {# type=models,filename=migrations/create_models/up.sql,min_version=0.2.0 #}
 {%- import "macros.j2" as m -%}
 
-{# TODO: create table only if the original name of the model is in option.entities. e.g. by default an embedded model is not created #}
 {%- for model in models %}
 CREATE TABLE {{ model.object.name|plural|lower }} (
   {%- if m::model_has_primary_key(model=model)=="false" %}

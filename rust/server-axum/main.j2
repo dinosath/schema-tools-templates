@@ -1,6 +1,7 @@
 {# type=models,filename=src/main.rs,min_version=0.5.0 #}
 {%- import "macros.j2" as m -%}
 {%- import "extra.j2" as e -%}
+extern crate dotenv;
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts, State},
@@ -15,6 +16,8 @@ use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use dotenv::dotenv;
+use std::env;
 
 mod models;
 mod schema;
@@ -22,6 +25,7 @@ mod services;
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -30,7 +34,7 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let db_url = std::env::var("DATABASE_URL").unwrap_or("localhost:5432".to_string());
+    let db_url = env::var("DATABASE_URL").unwrap_or("localhost:5432".to_string());
 
 
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(db_url);
@@ -41,8 +45,8 @@ async fn main() {
         {% for model in models %}
         {%- set model_name = model.object.name %}
         {%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
-        .route("/{{ model_name | plural | camelcase }}",get(services::get_{{ model_name | plural | lower }}))
-        .route("/{{ model_name | plural | camelcase }}",post(services::post_{{ model_name | plural | lower }}))
+        .route("/{{ model_name | plural | camelcase }}",get(services::list_{{ model_name | plural | lower }}))
+        .route("/{{ model_name | plural | camelcase }}",post(services::create_{{ model_name | lower }}))
         .route("/{{ model_name | plural | camelcase }}/:id",get(services::get_{{ model_name | lower }}))
         .route("/{{ model_name | plural | camelcase }}/:id",put(services::update_{{ model_name | lower }}))
         .route("/{{ model_name | plural | camelcase }}/:id",patch(services::partial_update_{{ model_name | lower }}))

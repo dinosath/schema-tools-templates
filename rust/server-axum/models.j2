@@ -21,7 +21,7 @@ use uuid::Uuid;
 {%- endif %}
 {%- if model.object %}
 #[derive(Deserialize, Serialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Queryable, Selectable, AsChangeset)]
-#[diesel(table_name = crate::schema::{{ model.object.name | lower }})]
+#[diesel(table_name = crate::schema::{{ model.object.name | plural | lower }})]
 pub struct {{ m::model_name(name = model.object.name) }} {
     {%- if m::has_primary_key(model=model)=="false"%}
     id: i64,
@@ -41,7 +41,7 @@ pub struct {{ m::model_name(name = model.object.name) }} {
 }
 
 #[derive(Deserialize, Debug,{% if not options.skipValidate %} Validate,{% endif %} Clone{% if model.object.properties | filter(attribute="required", value=true) | length == 0 %}, Default{% endif %}, Insertable)]
-#[diesel(table_name = crate::schema::{{ model.object.name | lower }})]
+#[diesel(table_name = crate::schema::{{ model.object.name | plural | lower }})]
 pub struct {{ m::model_name(name = model.object.name) }}Dto {
     {%- set filtered_properties = model.object.properties | filter_not(attribute="type", value="const") -%}
     {%- for property in filtered_properties -%}
