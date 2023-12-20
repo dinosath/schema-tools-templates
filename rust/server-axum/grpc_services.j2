@@ -1,0 +1,104 @@
+{# type=models,filename=src/grpc_services.rs,min_version=0.5.0 #}
+{%- import "macros.j2" as m -%}
+{%- import "extra.j2" as e -%}
+use grpc_crud::*;
+use tonic::{transport::server::Routes, Request, Response, Status, Streaming};
+use tokio_stream::{wrappers::ReceiverStream, Stream};
+{%- for model in models %}
+{%- set model_name = model.object.name %}
+{%- set table_name = model_name | plural | lower %}
+{%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
+use grpc_crud::{{ model_name|lower }}_crud_service_server::{ {{ model_name|title }}CrudService, {{ model_name|title }}CrudServiceServer };
+{% endif %}
+{% endfor %}
+pub mod grpc_crud {
+    tonic::include_proto!("crud");
+
+    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
+        tonic::include_file_descriptor_set!("crud_descriptor");
+}
+
+fn grpc_server_routes() -> Routes {
+    let reflection_service = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
+        .build()
+        .unwrap();
+    let grpc = tonic::transport::Server::builder()
+        .add_service(reflection_service)
+        {%- for model in models %}
+        {%- set model_name = model.object.name %}
+        {%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
+        {%- set model_name_title = model.object.name | title %}
+        .add_service({{model_name}}CrudServiceServer::new({{model_name}}GrpcCrudServiceImpl::default()))
+        {% endif %}
+        {% endfor %}
+
+        .into_service();
+    return grpc;
+}
+{%- for model in models %}
+{%- set model_name = model.object.name %}
+{%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
+{%- set model_name_title = model.object.name | title %}
+{%- set model_name_lower = model.object.name | lower %}
+#[derive(Default)]
+pub(crate) struct {{model_name}}GrpcCrudServiceImpl {}
+
+#[tonic::async_trait]
+impl {{model_name_title}}CrudService  for {{model_name_title}}GrpcCrudServiceImpl {
+
+    async fn create_{{ model_name_lower }}(&self, request: tonic::Request<{{ model_name_title }}CreateRequest>) -> Result<Response<{{ model_name_title }}>, Status> {
+        tracing::info!("Got a request from {:?}", request.remote_addr());
+        let reply = {{ model_name_title }} {
+            id: 1,
+            first_name: format!("Hello!"),
+        };
+        Ok(Response::new(reply))
+    }
+
+    async fn get_{{ model_name_lower }}(&self, request: Request<{{ model_name_title }}>) -> Result<Response<{{ model_name_title }}>, Status> {
+        todo!()
+    }
+
+    async fn update_{{ model_name_lower }}(&self, request: Request<{{ model_name_title }}>) -> Result<Response<{{ model_name_title }}>, Status> {
+        todo!()
+    }
+
+    async fn delete_{{ model_name_lower }}(&self, request: Request<{{ model_name_title }}>) -> Result<Response<Empty>, Status> {
+        todo!()
+    }
+
+    type List{{ model_name_title }}Stream = ReceiverStream<Result<{{ model_name_title }}, Status>>;
+
+
+    async fn list_{{ model_name_lower }}(&self, request: Request<Empty>) -> Result<Response<Self::List{{ model_name_title }}Stream>, Status> {
+        todo!()
+    }
+
+    type BulkCreate{{ model_name_title }}Stream = ReceiverStream<Result<{{ model_name_title }}, Status>>;
+
+    async fn bulk_create_{{ model_name_lower }}(&self, request: Request<Streaming<{{ model_name_title }}CreateRequest>>) -> Result<Response<Self::BulkCreate{{ model_name_title }}Stream>, Status> {
+        todo!()
+    }
+
+    type BulkUpdate{{ model_name_title }}Stream = ReceiverStream<Result<{{ model_name_title }}, Status>>;
+
+    async fn bulk_update_{{ model_name_lower }}(&self, request: Request<Streaming<{{ model_name_title }}>>) -> Result<Response<Self::BulkUpdate{{ model_name_title }}Stream>, Status> {
+        todo!()
+    }
+
+    type BulkDelete{{ model_name_title }}Stream = ReceiverStream<Result<Empty, Status>>;
+
+    async fn bulk_delete_{{ model_name_lower }}(&self, request: Request<Streaming<{{ model_name_title }}>>) -> Result<Response<Self::BulkDelete{{ model_name_title }}Stream>, Status> {
+        todo!()
+    }
+
+    type Watch{{ model_name_title }}Stream = ReceiverStream<Result<{{ model_name_title }}, Status>>;
+
+    async fn watch_{{ model_name_lower }}(&self, request: Request<Streaming<{{ model_name_title }}>>) -> Result<Response<Self::Watch{{ model_name_title }}Stream>, Status> {
+        todo!()
+    }
+}
+
+{% endif %}
+{% endfor %}

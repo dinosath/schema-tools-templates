@@ -1,10 +1,9 @@
 {# type=static,filename=Cargo.toml,min_version=0.5.0 #}
 [package]
-name = "axum-service"
+name = "crud-service"
 version = "0.1.0"
 authors = ["Kacper Stasik <kacper@stasik.eu>"]
 edition = "2021"
-
 
 [profile.release]
 lto = true
@@ -13,26 +12,33 @@ panic = "abort"
 strip = true
 
 [build-dependencies]
-testcontainers = "0.14.0"
+testcontainers = "0.15"
+tonic-build = { version = "0.10", features = ["prost"] }
 
 [dependencies]
-tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
 axum = "0.7"
 bb8 = "0.8"
-diesel = { version = "2", features = ["chrono", "postgres", "uuid", "chrono"] }
+chrono = { version = "0.4", features = ["serde"] }
+diesel = { version = "2", features = ["postgres", "uuid", "chrono"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
 dotenv = "0.15"
+futures-core = "0.3"
+futures = "0.3"
+hyper = { version = "1", features = ["full"] }
+lazy_static = "1.4"
+opentelemetry = { version = "0.21", features = ["trace", "metrics"] }
+opentelemetry-otlp = { version = "0.14", features = ["tonic", "metrics"] }
+prost = "0.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-uuid = { version = "1", features = ["serde", "v4"] }
-validator = { version = "0.16", features = ["derive"] }
-lazy_static = "1.4"
-chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+tonic = "0.10"
+tonic-reflection = "0.10"
+tower = { version = "0.4", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-opentelemetry = "0.22"
-opentelemetry = { version = "0.21", features = ["trace", "metrics"] }
-opentelemetry-otlp = { version = "0.14", features = ["tonic", "metrics"] }
-futures-core = "0.3"
-futures = "0.3"
-async-trait = "0.1"
+uuid = { version = "1", features = ["serde", "v4"] }
+validator = { version = "0.16", features = ["derive"] }

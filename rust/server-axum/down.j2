@@ -1,6 +1,7 @@
 {# type=models,filename=migrations/create_models/down.sql,min_version=0.2.0 #}
 {%- import "macros.j2" as m -%}
 
+{# TODO: create table only if the original name of the model is in option.entities. e.g. by default an embedded model is not created #}
 {%- for model in models %}
-DROP TABLE {{ model.object.name|lower }};
+DROP TABLE {{ model.object.name|plural|lower }} ;
 {%- endfor -%}

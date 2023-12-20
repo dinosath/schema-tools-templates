@@ -21,7 +21,8 @@ use std::env;
 
 mod models;
 mod schema;
-mod services;
+mod grpc_services;
+mod rest_services;
 
 #[tokio::main]
 async fn main() {
@@ -45,15 +46,16 @@ async fn main() {
         {% for model in models %}
         {%- set model_name = model.object.name %}
         {%- if not options.skipModels or options.skipModels and not model_name in options.skipModels %}
-        .route("/{{ model_name | plural | camelcase }}",get(services::list_{{ model_name | plural | lower }}))
-        .route("/{{ model_name | plural | camelcase }}",post(services::create_{{ model_name | lower }}))
-        .route("/{{ model_name | plural | camelcase }}/:id",get(services::get_{{ model_name | lower }}))
-        .route("/{{ model_name | plural | camelcase }}/:id",put(services::update_{{ model_name | lower }}))
-        .route("/{{ model_name | plural | camelcase }}/:id",patch(services::partial_update_{{ model_name | lower }}))
-        .route("/{{ model_name | plural | camelcase }}/:id",delete(services::delete_{{ model_name | lower }}))
+        .route("/{{ model_name | plural | camelcase }}",get(rest_services::list_{{ model_name | plural | lower }}))
+        .route("/{{ model_name | plural | camelcase }}",post(rest_services::create_{{ model_name | lower }}))
+        .route("/{{ model_name | plural | camelcase }}/:id",get(rest_services::get_{{ model_name | lower }}))
+        .route("/{{ model_name | plural | camelcase }}/:id",put(rest_services::update_{{ model_name | lower }}))
+        .route("/{{ model_name | plural | camelcase }}/:id",patch(rest_services::partial_update_{{ model_name | lower }}))
+        .route("/{{ model_name | plural | camelcase }}/:id",delete(rest_services::delete_{{ model_name | lower }}))
         {%- endif %}
         {%- endfor %}
         .with_state(pool);
+
 
     let port = std::env::var("HTTP_PORT").unwrap_or("3000".to_string()).parse::<u16>().unwrap();
     let listener = TcpListener::bind(format!("0.0.0.0:{}",port)).await.unwrap();
